@@ -3,6 +3,7 @@ import os
 
 from flask import Flask, Request
 from flask_restful import Api
+from flask.ext.sqlalchemy import SQLAlchemy
 
 class MyRequest(Request):
     json_paths = []
@@ -23,6 +24,7 @@ class MyApi(Api):
 
 app = Flask(__name__)
 api = Api(app)
+db = SQLAlchemy(app)
 
 app.request_class = MyRequest
 

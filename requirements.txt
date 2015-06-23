@@ -1,2 +1,5 @@
 flask-restful
+flask-sqlalchemy
+flask-migrate
 flask-script
+mysql
