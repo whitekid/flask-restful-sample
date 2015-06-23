@@ -8,8 +8,8 @@ import unittest
 
 class TodoTest(unittest.TestCase):
     def setUp(self):
-        # 서버 코드 안에까지 traceback 출력하는군.
-        # app.config['DEBUG'] = True
+        app.config['DEBUG'] = True
+        app.config['TESTING'] = True
         self.app = app.test_client()
 
     def post(self, url, data):
@@ -22,7 +22,7 @@ class TodoTest(unittest.TestCase):
         return json.loads(self.app.get(url).data)
 
     def delete(self, url):
-        return json.loads(self.app.delete(url).data)
+        return self.app.delete(url).data
 
     def put(self, url, data):
         if type(data) == types.DictType:
@@ -33,19 +33,23 @@ class TodoTest(unittest.TestCase):
     def test_simple(self):
         # create
         resp = self.post('/todo/', {'task': 'sample test'})
-        self.assertTrue(resp['id'])
+        self.assertTrue(resp['todo']['id'])
+        todo_id = resp['todo']['id']
+
+        # list
+        resp = self.get('/todo/')
+        self.assertEquals(1, len(resp), resp)
 
         # read
-        todo_id = resp['id']
         resp = self.get('/todo/%s' % todo_id)
-        self.assertEquals(todo_id, resp['id'], str(resp))
+        self.assertEquals(todo_id, resp['todo']['id'], str(resp))
 
         # update
         resp = self.put('/todo/%s' % todo_id, {'task': 'updated'})
-        self.assertEquals('updated', resp['task'])
+        self.assertEquals('updated', resp['todo']['task'])
 
         # delete
-        resp = self.delete('/todo/%s' % resp['id'])
+        resp = self.delete('/todo/%s' % resp['todo']['id'])
         resp = self.get('/todo/%s' % todo_id)
         self.assertEquals(404, resp['status'])
 

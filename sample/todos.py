@@ -7,22 +7,20 @@ from flask_restful import Resource, fields, marshal_with
 # resource def
 todos = {}
 
+# reset fields
+todo_fields = {
+    'id': fields.String(attribute='id'),
+    'task': fields.String
+}
+
 class Todo(object):
     def __init__(self, task):
         self.id = str(uuid.uuid1())
         self.task = task
 
-    def __iter__(self):
-        for k in ('id', 'task'):
-            yield k, getattr(self, k)
-
 
 class TodoResource(Resource):
-    fields = {
-        'id': fields.String(attribute='id'),
-        'task': fields.String
-    }
-    @marshal_with(fields)
+    @marshal_with(todo_fields, envelope='todo')
     def get(self, todo_id):
         try:
             todo = todos[todo_id]
@@ -33,6 +31,7 @@ class TodoResource(Resource):
         except KeyError:
             abort(404)
 
+    @marshal_with(todo_fields, envelope='todo')
     def put(self, todo_id):
         # reqjest.json은 application/json인 경우만..
         # 아닌 경우는 request.get_json(force=True)로 처리...
@@ -40,7 +39,7 @@ class TodoResource(Resource):
             data = request.get_json(force=True)
             todo = todos[todo_id]
             todo.task = data['task']
-            return dict(todo)
+            return todo, 201
         except KeyError:
             abort(404)
 
@@ -48,19 +47,24 @@ class TodoResource(Resource):
         try:
             del todos[todo_id]
 
-            return '{}'
+            return '', 204
         except KeyError:
             abort(404)
 
 
 class TodoList(Resource):
+    @marshal_with(todo_fields)
+    def get(self):
+        return todos.values()
+
+    @marshal_with(todo_fields, envelope='todo')
     def post(self):
         # request의 content-type이 application/json이여야 함
         todo = Todo(request.json['task'])
         todos[todo.id] = todo
 
         # response의 content_type은 application/json으로 설정됨
-        return dict(todo)
+        return todo, 201
 
 
 from _app import api
