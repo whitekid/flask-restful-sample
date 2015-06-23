@@ -1,8 +1,14 @@
 #! -*- coding: utf8 -*-
 import uuid
 
-from flask import request, abort
+from flask import request
 from flask_restful import Resource, fields, marshal_with
+from werkzeug import exceptions
+
+# see werkzeug.http.HTTP_STATUS_CODES
+CREATED = 201
+ACCEPTED = 202
+NO_CONTENT = 204
 
 # resource def
 todos = {}
@@ -22,34 +28,28 @@ class Todo(object):
 class TodoResource(Resource):
     @marshal_with(todo_fields, envelope='todo')
     def get(self, todo_id):
-        try:
-            todo = todos[todo_id]
-            # dict로 리턴하면 바로 json으로
-            # 객체로 리턴하면 marshal_with로..
-            # dict(todo)와 같음
-            return todo
-        except KeyError:
-            abort(404)
+        if todo_id not in todos:
+            raise exceptions.NotFound
+
+        return todos[todo_id]
 
     @marshal_with(todo_fields, envelope='todo')
     def put(self, todo_id):
-        # reqjest.json은 application/json인 경우만..
-        # 아닌 경우는 request.get_json(force=True)로 처리...
-        try:
-            data = request.get_json(force=True)
-            todo = todos[todo_id]
-            todo.task = data['task']
-            return todo, 201
-        except KeyError:
-            abort(404)
+        if todo_id not in todos:
+            raise exceptions.NotFound
+
+        data = request.json
+        todo = todos[todo_id]
+        todo.task = data['task']
+        return todo, CREATED
 
     def delete(self, todo_id):
-        try:
-            del todos[todo_id]
+        if todo_id not in todos:
+            raise exceptions.NotFound
 
-            return '', 204
-        except KeyError:
-            abort(404)
+        del todos[todo_id]
+
+        return '', NO_CONTENT
 
 
 class TodoList(Resource):
@@ -64,7 +64,7 @@ class TodoList(Resource):
         todos[todo.id] = todo
 
         # response의 content_type은 application/json으로 설정됨
-        return todo, 201
+        return todo, CREATED
 
 
 from _app import api
